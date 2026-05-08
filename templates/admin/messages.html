@@ -1,0 +1,26 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Messages — Admin{% endblock %}
+{% block page_title %}Messages Clients{% endblock %}
+{% block admin_content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+  <div>
+    <h2 style="font-family:var(--font-display);font-size:20px;color:var(--espresso);margin-bottom:16px">Messages reçus</h2>
+    {% for m in messages %}
+    <div class="msg-card" style="margin-bottom:10px">
+      <div class="msg-meta"><strong>{{ m.expediteur.nom or m.expediteur.email if m.expediteur else '—' }}</strong><span>{{ m.date_envoi.strftime('%d/%m %H:%M') }}</span></div>
+      <div class="msg-content">{{ m.contenu }}</div>
+      {% if m.expediteur %}<div style="margin-top:10px;display:flex;gap:8px"><input type="text" id="msg_{{ m.expediteur.id }}" class="form-control" style="flex:1" placeholder="Répondre..."><button onclick="envoyerMsgClient({{ m.expediteur.id }})" class="btn-sm btn-sm-gold">Envoyer</button></div>{% endif %}
+    </div>
+    {% else %}<p style="color:var(--text-light);padding:40px;text-align:center">Aucun message reçu</p>{% endfor %}
+  </div>
+  <div>
+    <h2 style="font-family:var(--font-display);font-size:20px;color:var(--espresso);margin-bottom:16px">Contacter un client</h2>
+    <div class="admin-card">
+      <div class="form-group"><label>Client</label><select id="clientSel" class="form-control">{% for c in clients %}<option value="{{ c.id }}">{{ c.nom or c.email }}</option>{% endfor %}</select></div>
+      <div class="form-group"><label>Message</label><textarea id="msgSel" class="form-control" rows="4" placeholder="Votre message..."></textarea></div>
+      <button onclick="envoyerMsgSel()" class="btn-sm btn-sm-gold" style="padding:10px 20px">Envoyer</button>
+    </div>
+  </div>
+</div>
+<script>function envoyerMsgSel(){const c=document.getElementById('clientSel').value;const m=document.getElementById('msgSel').value.trim();if(!m)return;fetch('/admin/envoyer-message-client',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_id:c,contenu:m})}).then(r=>r.json()).then(d=>{if(d.success){showToast('Envoyé!');document.getElementById('msgSel').value='';}}); }</script>
+{% endblock %}

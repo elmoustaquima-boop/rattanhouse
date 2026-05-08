@@ -1,0 +1,35 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Devis — Admin{% endblock %}
+{% block page_title %}Gestion des Devis{% endblock %}
+{% block admin_content %}
+{% for d in devis_list %}
+<div class="admin-card">
+  <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+    <div>
+      <h3 style="margin-bottom:4px">Devis #{{ d.id }} — {% if d.produit %}{{ d.produit.nom }}{% else %}Modèle personnalisé{% endif %}</h3>
+      <p style="font-size:13px;color:var(--text-light)">{{ d.client.nom or d.client.email if d.client else '—' }} · {{ d.date_demande.strftime('%d/%m/%Y %H:%M') }}</p>
+    </div>
+    <span class="badge {% if d.statut=='en_attente' %}badge-warn{% elif d.statut=='devis_envoye' %}badge-ok{% else %}badge-blue{% endif %}" style="padding:6px 14px">{{ d.statut|replace('_',' ')|title }}</span>
+  </div>
+  {% if d.mesures %}<div style="background:var(--cream);padding:12px;border-radius:8px;margin-bottom:12px;font-size:13.5px"><strong>Mesures : </strong>{{ d.mesures }}</div>{% endif %}
+  {% if d.description %}<div style="background:var(--cream);padding:12px;border-radius:8px;margin-bottom:12px;font-size:13.5px"><strong>Description : </strong>{{ d.description }}</div>{% endif %}
+  {% if d.image_modele %}<div style="margin-bottom:12px"><strong style="font-size:13px">Image modèle :</strong><br><img src="{{ url_for('static', filename='uploads/'+d.image_modele) }}" style="max-height:180px;border-radius:10px;margin-top:8px"></div>{% endif %}
+  {% if d.statut != 'devis_envoye' %}
+  <div style="border-top:1px solid var(--beige2);padding-top:16px;margin-top:8px">
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group"><label>Montant estimé (MAD)</label><input type="number" id="m_{{ d.id }}" class="form-control" placeholder="Ex: 3500"></div>
+      <div class="form-group"><label>Message au client</label><input type="text" id="r_{{ d.id }}" class="form-control" placeholder="Ex: Délai: 2 semaines"></div>
+    </div>
+    <button onclick="repondreDevis({{ d.id }})" class="btn-sm btn-sm-green" style="padding:10px 20px">Envoyer le devis</button>
+  </div>
+  {% else %}
+  <div style="background:var(--beige);border-radius:8px;padding:14px;margin-top:8px">
+    <strong style="color:var(--gold-dark);font-size:22px;font-family:var(--font-display)">{{ "%.0f"|format(d.montant_estime) if d.montant_estime else '—' }} MAD</strong>
+    {% if d.reponse_gestionnaire %}<p style="font-size:13px;margin-top:6px">{{ d.reponse_gestionnaire }}</p>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<div style="text-align:center;padding:80px;color:var(--text-light)"><p>Aucun devis pour le moment</p></div>
+{% endfor %}
+{% endblock %}

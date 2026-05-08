@@ -1,0 +1,28 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Commandes — Admin{% endblock %}
+{% block page_title %}Gestion des Commandes{% endblock %}
+{% block admin_content %}
+<table class="admin-table">
+  <thead><tr><th>#</th><th>Client</th><th>Produit</th><th>Montant</th><th>Livraison</th><th>Date</th><th>Statut</th></tr></thead>
+  <tbody>
+    {% for c in commandes %}
+    <tr>
+      <td>#{{ c.id }}</td>
+      <td><strong>{{ c.client.nom or '—' if c.client else '—' }}</strong><br><small style="color:var(--text-light)">{{ c.client.email if c.client else '' }}</small></td>
+      <td>{{ c.produit.nom[:28] if c.produit else '—' }}</td>
+      <td><strong style="color:var(--gold-dark)">{{ "%.0f"|format(c.montant_total) if c.montant_total else '—' }} MAD</strong></td>
+      <td>{{ c.mode_livraison|capitalize if c.mode_livraison else '—' }}</td>
+      <td>{{ c.date_commande.strftime('%d/%m/%Y') }}</td>
+      <td><select onchange="majCommande({{ c.id }},this.value)" style="padding:6px;border-radius:8px;border:1.5px solid var(--beige2);font-size:13px">
+        <option {% if c.statut=='en_preparation' %}selected{% endif %} value="en_preparation">En préparation</option>
+        <option {% if c.statut=='pret' %}selected{% endif %} value="pret">Prêt</option>
+        <option {% if c.statut=='livre' %}selected{% endif %} value="livre">Livré</option>
+        <option {% if c.statut=='annule' %}selected{% endif %} value="annule">Annulé</option>
+      </select></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-light)">Aucune commande</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

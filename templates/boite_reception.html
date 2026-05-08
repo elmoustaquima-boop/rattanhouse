@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Mes messages — Rattan House{% endblock %}
+{% block content %}
+<div class="inbox-page">
+  <h1>Boîte de réception</h1>
+  <div class="inbox-tabs">
+    <div class="inbox-tab active" onclick="showInboxTab('msgs',this)">Messages</div>
+    <div class="inbox-tab" onclick="showInboxTab('devis',this)">Mes Devis</div>
+    <div class="inbox-tab" onclick="showInboxTab('contact',this)">Contacter le gestionnaire</div>
+  </div>
+
+  <div id="tab-msgs">
+    {% for m in messages %}
+    <div class="msg-card {% if not m.lu %}unread{% endif %}">
+      <div class="msg-meta">
+        <span>De : Rattan House</span>
+        <span>{{ m.date_envoi.strftime('%d/%m/%Y %H:%M') }}</span>
+      </div>
+      <div class="msg-content">{{ m.contenu }}</div>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:60px;color:var(--text-light)">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin:0 auto 12px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      <p>Aucun message pour le moment</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="tab-devis" style="display:none">
+    {% for d in devis_list %}
+    <div class="devis-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <strong style="font-family:var(--font-display);font-size:18px">
+          {% if d.produit %}{{ d.produit.nom }}{% else %}Modèle personnalisé{% endif %}
+        </strong>
+        <span class="status-badge {% if d.statut=='en_attente' %}status-wait{% elif d.statut=='devis_envoye' %}status-sent{% elif d.statut=='artisan_requis' %}status-artisan{% else %}status-model{% endif %}">
+          {% if d.statut=='en_attente' %}En attente{% elif d.statut=='devis_envoye' %}Devis reçu{% elif d.statut=='artisan_requis' %}Artisan demandé{% elif d.statut=='modele_depose' %}Modèle déposé{% else %}{{ d.statut }}{% endif %}
+        </span>
+      </div>
+      <p style="font-size:13px;color:var(--text-light);margin-bottom:8px">{{ d.date_demande.strftime('%d/%m/%Y') }}</p>
+      {% if d.description %}<p style="font-size:14px;color:var(--text);margin-bottom:8px">{{ d.description }}</p>{% endif %}
+      {% if d.montant_estime %}
+      <div style="background:var(--beige);border-radius:var(--radius-sm);padding:14px;margin-top:10px">
+        <strong style="color:var(--gold-dark);font-family:var(--font-display);font-size:22px">{{ "%.0f"|format(d.montant_estime) }} MAD</strong>
+        {% if d.reponse_gestionnaire %}<p style="font-size:13.5px;margin-top:6px;color:var(--text)">{{ d.reponse_gestionnaire }}</p>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:60px;color:var(--text-light)">
+      <p>Aucun devis pour le moment</p>
+      <a href="/catalogue" class="btn-primary" style="margin-top:16px;display:inline-flex">Voir le catalogue</a>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="tab-contact" style="display:none">
+    <div style="background:var(--white);border-radius:var(--radius);padding:24px;border:1.5px solid var(--beige2)">
+      <h3 style="font-family:var(--font-display);font-size:20px;color:var(--espresso);margin-bottom:16px">Envoyer un message au gestionnaire</h3>
+      <div class="form-group">
+        <textarea id="newMsgText" class="form-control" rows="4" placeholder="Votre message..."></textarea>
+      </div>
+      <button onclick="envoyerMessageGestionnaire()" class="btn-primary">Envoyer le message</button>
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--beige2)">
+        <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">Ou contactez-nous directement :</p>
+        <a href="https://wa.me/212669952693" target="_blank" style="display:inline-flex;align-items:center;gap:8px;color:#25D366;font-weight:600;margin-right:24px;font-size:14px">
+          +212 669 952 693
+        </a>
+        <a href="https://instagram.com/rattanhousema" target="_blank" style="display:inline-flex;align-items:center;gap:8px;color:#E1306C;font-weight:600;font-size:14px">
+          @rattanhousema
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

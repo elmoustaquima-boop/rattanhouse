@@ -1,0 +1,15 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Clients — Admin{% endblock %}
+{% block page_title %}Gestion des Clients{% endblock %}
+{% block admin_content %}
+<table class="admin-table">
+  <thead><tr><th>#</th><th>Nom</th><th>Email</th><th>Téléphone</th><th>Inscription</th></tr></thead>
+  <tbody>
+    {% for c in clients %}
+    <tr><td>#{{ c.id }}</td><td><strong>{{ c.nom or '—' }}</strong></td><td>{{ c.email }}</td><td>{{ c.telephone or '—' }}</td><td>{{ c.date_inscription.strftime('%d/%m/%Y') }}</td></tr>
+    {% else %}
+    <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-light)">Aucun client inscrit</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

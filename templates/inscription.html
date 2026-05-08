@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Inscription — Rattan House{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Rattan House">
+    </div>
+    <h2 class="auth-title">Créer un compte</h2>
+    <p class="auth-sub">Inscrivez-vous pour suivre vos commandes et recevoir vos devis.</p>
+    <div class="auth-error" id="regErr"></div>
+    <div class="form-group">
+      <label>Nom complet <span style="color:var(--text-light);font-weight:400">(optionnel)</span></label>
+      <input type="text" id="regNom" class="form-control" placeholder="Votre nom">
+    </div>
+    <div class="form-group">
+      <label>Email *</label>
+      <input type="email" id="regEmail" class="form-control" placeholder="votre@email.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Téléphone <span style="color:var(--text-light);font-weight:400">(optionnel)</span></label>
+      <input type="tel" id="regTel" class="form-control" placeholder="+212 6XX XXX XXX">
+    </div>
+    <div class="form-group">
+      <label>Mot de passe *</label>
+      <input type="password" id="regPwd" class="form-control" placeholder="Minimum 6 caractères" autocomplete="new-password">
+    </div>
+    <button onclick="doInscription()" class="btn-primary btn-full" style="margin-top:4px">
+      Créer mon compte
+    </button>
+    <div class="auth-switch" style="margin-top:20px">
+      Déjà un compte ? <a href="/connexion">Se connecter</a>
+    </div>
+    <div style="text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--beige2)">
+      <a href="/" style="font-size:13px;color:var(--text-light)">← Continuer sans compte</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
