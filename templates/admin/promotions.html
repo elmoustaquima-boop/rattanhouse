@@ -6,12 +6,12 @@
 <table class="admin-table">
   <thead><tr><th>Produit</th><th>Prix actuel</th><th>Promotion actuelle</th><th>Nouvelle réduction (%)</th><th>Action</th></tr></thead>
   <tbody>
-    {% for p in produits %}{% if p.type_produit=='standard' and p.prix %}
+    {% for p in produits %}{% if p.type_produit=='standard' and p.prix_affiche %}
     <tr>
       <td><strong>{{ p.nom[:35] }}</strong></td>
-      <td><strong style="color:var(--gold-dark)">{{ "%.0f"|format(p.prix) }} MAD</strong></td>
-      <td>{% if p.promotion %}<span class="badge badge-warn">-{{ p.promotion|int }}%</span> → {{ "%.0f"|format(p.prix*(1-p.promotion/100)) }} MAD{% else %}<span style="color:var(--text-light)">Aucune</span>{% endif %}</td>
-      <td><input type="number" id="promo_{{ p.id }}" value="{{ p.promotion|int if p.promotion else 0 }}" min="0" max="90" class="form-control" style="width:80px;display:inline-block"> %</td>
+      <td><strong style="color:var(--gold-dark)">{{ "%.0f"|format(p.prix_affiche) }} MAD</strong></td>
+      <td>{% if p.promotion_appliquee %}<span class="badge badge-warn">-{{ p.promotion_appliquee|int }}%</span> → {{ "%.0f"|format(p.prix_affiche*(1-p.promotion_appliquee/100)) }} MAD{% else %}<span style="color:var(--text-light)">Aucune</span>{% endif %}</td>
+      <td><input type="number" id="promo_{{ p.id }}" value="{{ p.promotion_appliquee|int if p.promotion_appliquee else 0 }}" min="0" max="90" class="form-control" style="width:80px;display:inline-block"> %</td>
       <td><button onclick="appliquerPromo({{ p.id }})" class="btn-sm btn-sm-gold">Appliquer</button></td>
     </tr>
     {% endif %}{% endfor %}

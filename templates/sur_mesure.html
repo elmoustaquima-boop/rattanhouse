@@ -163,7 +163,7 @@ async function envoyerSurMesure() {
     const r = await fetch('/api/demande-mesure', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ nom, telephone: tel, type_produit: type, matiere, description: desc, photo: photoBase64 })
+      body: JSON.stringify({ nom: nom, telephone: tel, type_produit: type, matiere: matiere, description: desc, photo: photoBase64 })
     });
     const d = await r.json();
     if (d.success) {
