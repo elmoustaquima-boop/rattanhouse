@@ -1,0 +1,20 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Promotions — Admin{% endblock %}
+{% block page_title %}Gérer les Promotions{% endblock %}
+{% block admin_content %}
+<p style="color:var(--text-light);margin-bottom:20px">Appliquez des réductions en pourcentage. Mettez 0 pour supprimer une promotion.</p>
+<table class="admin-table">
+  <thead><tr><th>Produit</th><th>Prix actuel</th><th>Promotion actuelle</th><th>Nouvelle réduction (%)</th><th>Action</th></tr></thead>
+  <tbody>
+    {% for p in produits %}{% if p.type_produit=='standard' and p.prix %}
+    <tr>
+      <td><strong>{{ p.nom[:35] }}</strong></td>
+      <td><strong style="color:var(--gold-dark)">{{ "%.0f"|format(p.prix) }} MAD</strong></td>
+      <td>{% if p.promotion %}<span class="badge badge-warn">-{{ p.promotion|int }}%</span> → {{ "%.0f"|format(p.prix*(1-p.promotion/100)) }} MAD{% else %}<span style="color:var(--text-light)">Aucune</span>{% endif %}</td>
+      <td><input type="number" id="promo_{{ p.id }}" value="{{ p.promotion|int if p.promotion else 0 }}" min="0" max="90" class="form-control" style="width:80px;display:inline-block"> %</td>
+      <td><button onclick="appliquerPromo({{ p.id }})" class="btn-sm btn-sm-gold">Appliquer</button></td>
+    </tr>
+    {% endif %}{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

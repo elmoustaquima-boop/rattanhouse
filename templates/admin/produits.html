@@ -1,0 +1,38 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Produits — Admin{% endblock %}
+{% block page_title %}Gestion des Produits{% endblock %}
+{% block admin_content %}
+<div class="admin-card">
+  <h3>Ajouter un produit</h3>
+  <form id="newProdForm" enctype="multipart/form-data">
+    <div class="form-row">
+      <div class="form-group"><label>Nom *</label><input type="text" name="nom" class="form-control" required placeholder="Ex: Fauteuil en rotin"></div>
+      <div class="form-group"><label>Matière *</label><select name="matiere" class="form-control" required><option value="rotin">Rotin</option><option value="raphia">Raphia</option><option value="roseau">Roseau</option><option value="corde_chanvre">Corde de chanvre</option><option value="osier">Osier</option><option value="doum">Doum</option><option value="jonc_de_mer">Jonc de mer</option><option value="fibre_palmier">Fibre de palmier</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Type</label><select name="type_produit" id="typeProduit" class="form-control" onchange="togglePrixField()"><option value="standard">Prix fixe (standard)</option><option value="mesure">Sur mesure (devis)</option></select></div>
+      <div class="form-group" id="prixField"><label>Prix (MAD)</label><input type="number" name="prix" class="form-control" placeholder="Ex: 1500" min="0"></div>
+    </div>
+    <div class="form-group"><label>Description</label><textarea name="description" class="form-control" rows="3" placeholder="Description du produit..."></textarea></div>
+    <div class="form-group"><label>Caractéristiques (séparées par |)</label><input type="text" name="caracteristiques" class="form-control" placeholder="Matière: rotin | Style: bohème | Dimensions: 120x80"></div>
+    <div class="form-group"><label>Image</label><input type="file" name="image" accept="image/*" class="form-control"></div>
+    <button type="button" onclick="soumettreNouveauProduit()" class="btn-primary">Ajouter le produit</button>
+  </form>
+</div>
+<h2 style="font-family:var(--font-display);font-size:22px;color:var(--espresso);margin-bottom:16px">{{ produits|length }} produits</h2>
+<table class="admin-table">
+  <thead><tr><th>Image</th><th>Nom</th><th>Matière</th><th>Type</th><th>Prix</th><th>Actions</th></tr></thead>
+  <tbody>
+    {% for p in produits %}
+    <tr>
+      <td>{% if p.image %}<img src="{{ url_for('static', filename='uploads/'+p.image) }}" style="width:48px;height:48px;object-fit:cover;border-radius:8px">{% else %}<div style="width:48px;height:48px;background:var(--beige);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px">🌿</div>{% endif %}</td>
+      <td><strong>{{ p.nom[:35] }}</strong></td>
+      <td>{{ p.matiere|replace('_',' ')|title if p.matiere else '—' }}</td>
+      <td><span class="badge {% if p.type_produit=='mesure' %}badge-blue{% else %}badge-ok{% endif %}">{{ 'Sur mesure' if p.type_produit=='mesure' else 'Standard' }}</span></td>
+      <td>{% if p.prix %}<strong style="color:var(--gold-dark)">{{ "%.0f"|format(p.prix) }} MAD</strong>{% else %}<span style="color:var(--text-light)">Sur devis</span>{% endif %}</td>
+      <td><button onclick="supprimerProduit({{ p.id }})" class="btn-sm btn-sm-red">Supprimer</button> <a href="/produit/{{ p.id }}" target="_blank" class="btn-sm" style="background:var(--beige);color:var(--brown);border-radius:var(--radius-sm);display:inline-block;padding:7px 14px;font-size:12.5px;font-weight:600">Voir</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

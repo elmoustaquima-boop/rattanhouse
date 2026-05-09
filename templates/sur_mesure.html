@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Sur Mesure — Rattan House{% endblock %}
+{% block content %}
+
+<div class="sur-mesure-page">
+  <div class="sur-mesure-hero">
+    <span class="tag">Service personnalisé</span>
+    <h1>Commande Sur Mesure</h1>
+    <p>Décrivez votre projet, entrez vos coordonnées WhatsApp et notre équipe vous contactera avec un devis personnalisé.</p>
+  </div>
+
+  <div class="sur-mesure-layout">
+
+    <!-- FORMULAIRE -->
+    <div class="sur-mesure-form">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nom complet *</label>
+          <input type="text" id="smNom" class="form-control" placeholder="Votre nom complet">
+        </div>
+        <div class="form-group">
+          <label>Numéro WhatsApp *</label>
+          <input type="tel" id="smTel" class="form-control" placeholder="+212 6XX XXX XXX">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type de produit *</label>
+          <select id="smType" class="form-control">
+            <option value="">Choisissez un type...</option>
+            <option>Chaise</option>
+            <option>Fauteuil</option>
+            <option>Table</option>
+            <option>Canapé</option>
+            <option>Salon complet</option>
+            <option>Panier / Corbeille</option>
+            <option>Lampe</option>
+            <option>Miroir</option>
+            <option>Décoration murale</option>
+            <option>Pergola</option>
+            <option>Bali Bed</option>
+            <option>Autre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Matière souhaitée</label>
+          <select id="smMatiere" class="form-control">
+            <option value="">Pas de préférence</option>
+            <option>Rotin</option>
+            <option>Raphia</option>
+            <option>Osier</option>
+            <option>Doum</option>
+            <option>Jonc de mer</option>
+            <option>Roseau</option>
+            <option>Corde de chanvre</option>
+            <option>Fibre de palmier</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Description de votre projet *</label>
+        <textarea id="smDesc" class="form-control" rows="5"
+          placeholder="Décrivez votre projet : dimensions souhaitées, couleur, style, utilisation, quantité..."></textarea>
+      </div>
+
+      <!-- UPLOAD PHOTO -->
+      <div class="form-group">
+        <label>Photo de référence (optionnel)</label>
+        <div class="file-drop" id="fileDrop" onclick="document.getElementById('smPhoto').click()">
+          <div id="fileDropContent">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--sand)" stroke-width="1.5">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p>Cliquez pour choisir une photo</p>
+            <small>PNG, JPG jusqu'à 5MB</small>
+          </div>
+          <input type="file" id="smPhoto" accept="image/*" style="display:none" onchange="previewSMFile(this)">
+        </div>
+      </div>
+
+      <button onclick="envoyerSurMesure()" class="btn-commander-wa" style="width:100%">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Envoyer ma demande
+      </button>
+      <p style="font-size:12px;color:var(--text-light);text-align:center;margin-top:10px;line-height:1.6">
+        Votre demande sera enregistrée et notre équipe vous contactera sur WhatsApp avec un devis personnalisé.
+      </p>
+    </div>
+
+    <!-- INFOS DROITE -->
+    <div class="sur-mesure-info">
+      <div class="sm-info-card">
+        <div class="sm-info-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h4>Artisanat authentique</h4>
+        <p>Chaque pièce est fabriquée à la main par nos artisans depuis 1986.</p>
+      </div>
+      <div class="sm-info-card">
+        <div class="sm-info-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h4>Réponse rapide</h4>
+        <p>Notre équipe vous contacte sur WhatsApp dans les plus brefs délais avec votre devis.</p>
+      </div>
+      <div class="sm-info-card">
+        <div class="sm-info-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        </div>
+        <h4>Livraison partout au Maroc</h4>
+        <p>Frais de livraison calculés selon votre ville et communiqués avec le devis.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function previewSMFile(input) {
+  const drop = document.getElementById('fileDropContent');
+  if (input.files && input.files[0]) {
+    const r = new FileReader();
+    r.onload = e => {
+      drop.innerHTML = `<img src="${e.target.result}" style="max-height:120px;border-radius:8px;margin:0 auto 8px;display:block">
+        <p style="font-size:12px;color:var(--text-light)">${input.files[0].name}</p>`;
+    };
+    r.readAsDataURL(input.files[0]);
+  }
+}
+
+async function envoyerSurMesure() {
+  const nom = document.getElementById('smNom').value.trim();
+  const tel = document.getElementById('smTel').value.trim();
+  const type = document.getElementById('smType').value;
+  const matiere = document.getElementById('smMatiere').value;
+  const desc = document.getElementById('smDesc').value.trim();
+
+  if (!nom) { showToast('Veuillez entrer votre nom', 'error'); return; }
+  if (!tel) { showToast('Veuillez entrer votre numéro WhatsApp', 'error'); return; }
+  if (!type) { showToast('Veuillez choisir un type de produit', 'error'); return; }
+  if (!desc) { showToast('Veuillez décrire votre projet', 'error'); return; }
+
+  const btn = document.querySelector('.btn-commander-wa');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Envoi en cours...';
+
+  // Convertir photo en base64
+  let photoBase64 = null;
+  const photoFile = document.getElementById('smPhoto').files[0];
+  if (photoFile) {
+    photoBase64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(photoFile);
+    });
+  }
+
+  try {
+    const r = await fetch('/api/demande-mesure', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ nom, telephone: tel, type_produit: type, matiere, description: desc, photo: photoBase64 })
+    });
+    const d = await r.json();
+    if (d.success) {
+      // Afficher confirmation
+      document.querySelector('.sur-mesure-form').innerHTML = `
+        <div style="text-align:center;padding:60px 20px">
+          <div style="width:72px;height:72px;background:#e8f5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;color:#2e7d32">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <h3 style="font-family:var(--font-display);font-size:26px;color:var(--espresso);margin-bottom:12px">Demande envoyée !</h3>
+          <p style="color:var(--text-light);line-height:1.7;max-width:400px;margin:0 auto 24px">
+            Merci <strong>${nom}</strong> ! Votre demande a bien été reçue.<br>
+            Notre équipe vous contactera sur WhatsApp au <strong>${tel}</strong> avec un devis personnalisé.
+          </p>
+          <a href="/catalogue" class="btn-primary">Voir notre catalogue</a>
+        </div>`;
+    } else {
+      showToast('Erreur. Réessayez.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Envoyer ma demande';
+    }
+  } catch(e) {
+    showToast('Erreur réseau. Réessayez.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Envoyer ma demande';
+  }
+}
+</script>
+{% endblock %}

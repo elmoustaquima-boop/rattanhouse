@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block title %}Rattan House — L'artisanat naturel, réinventé pour votre maison{% endblock %}
+{% block content %}
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-left-inner">
+      <div class="hero-tag">Artisanat marocain authentique depuis 1986</div>
+      <h1 class="hero-title">
+        L'artisanat naturel,<br>
+        réinventé pour<br>
+        <em>votre maison</em>
+      </h1>
+      <p class="hero-desc">Rattan House vous propose des meubles et décorations en matières naturelles, faits main avec passion et savoir-faire.</p>
+      <div class="hero-btns">
+        <a href="/catalogue" class="btn-primary">Découvrir la collection</a>
+        <a href="/sur-mesure" class="btn-outline">Commander sur mesure</a>
+      </div>
+      <div class="hero-trust">
+        <div class="trust-item">
+          <strong>38</strong>
+          <span>Années d'expérience</span>
+        </div>
+        <div class="trust-item">
+          <strong>100%</strong>
+          <span>Matières naturelles</span>
+        </div>
+        <div class="trust-item">
+          <strong>Fait main</strong>
+          <span>Par nos artisans</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="hero-right">
+    <img src="{{ url_for('static', filename='images/hero.jpg') }}" alt="Salon en rotin Rattan House">
+    <div class="hero-right-overlay"></div>
+  </div>
+</section>
+
+<!-- FEATURES STRIP -->
+<div class="features-strip">
+  <div class="features-strip-inner">
+    <div class="feat-item">
+      <div class="feat-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22V10M12 10C9 6 4 6 2 9M12 10c3-4 8-4 10-1M8 14c-2 0-4 1-4 3M16 14c2 0 4 1 4 3"/></svg>
+      </div>
+      <div>
+        <strong>Matières naturelles</strong>
+        <span>Sélectionnées avec soin</span>
+      </div>
+    </div>
+    <div class="feat-item">
+      <div class="feat-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 11V6a2 2 0 00-2-2 2 2 0 00-2 2"/><path d="M14 10V4a2 2 0 00-2-2 2 2 0 00-2 2v2"/><path d="M10 10.5V6a2 2 0 00-2-2 2 2 0 00-2 2v8"/><path d="M18 8a2 2 0 114 0v6a8 8 0 01-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 012.83-2.82L7 15"/></svg>
+      </div>
+      <div>
+        <strong>Fait main</strong>
+        <span>Par des artisans experts</span>
+      </div>
+    </div>
+    <div class="feat-item">
+      <div class="feat-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      </div>
+      <div>
+        <strong>Livraison rapide</strong>
+        <span>Partout au Maroc</span>
+      </div>
+    </div>
+    <div class="feat-item">
+      <div class="feat-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      </div>
+      <div>
+        <strong>Paiement sécurisé</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CATEGORIES -->
+<section class="categories-section">
+  <div style="max-width:1300px;margin:0 auto">
+    <div class="section-header">
+      <span class="tag">Collections</span>
+      <h2>Nos Catégories</h2>
+    </div>
+    <div class="cat-grid">
+      <a href="/catalogue?matiere=rotin" class="cat-card">
+        <img src="{{ url_for('static', filename='uploads/prod_1.jpg') }}" alt="Mobilier extérieur">
+        <div class="cat-card-overlay"></div>
+        <div class="cat-card-body">
+          <div><div class="cat-card-name">Mobilier extérieur</div><div class="cat-card-count">Salons, chaises, tables</div></div>
+          <div class="cat-card-arrow">→</div>
+        </div>
+      </a>
+      <a href="/catalogue?matiere=rotin" class="cat-card">
+        <img src="{{ url_for('static', filename='uploads/prod_21.jpg') }}" alt="Mobilier intérieur">
+        <div class="cat-card-overlay"></div>
+        <div class="cat-card-body">
+          <div><div class="cat-card-name">Mobilier intérieur</div><div class="cat-card-count">Rotin, raphia, osier</div></div>
+          <div class="cat-card-arrow">→</div>
+        </div>
+      </a>
+      <a href="/catalogue?matiere=roseau" class="cat-card">
+        <img src="{{ url_for('static', filename='uploads/prod_31.jpg') }}" alt="Pergolas">
+        <div class="cat-card-overlay"></div>
+        <div class="cat-card-body">
+          <div><div class="cat-card-name">Pergolas</div><div class="cat-card-count">Sur mesure, roseau, chaume</div></div>
+          <div class="cat-card-arrow">→</div>
+        </div>
+      </a>
+      <a href="/sur-mesure" class="cat-card">
+        <img src="{{ url_for('static', filename='uploads/prod_22.jpg') }}" alt="Sur mesure">
+        <div class="cat-card-overlay"></div>
+        <div class="cat-card-body">
+          <div><div class="cat-card-name">Sur mesure</div><div class="cat-card-count">Votre projet, notre expertise</div></div>
+          <div class="cat-card-arrow">→</div>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUITS VEDETTES -->
+<section class="products-section">
+  <div class="products-grid" style="max-width:1300px;margin:0 auto">
+    <div class="section-header-flex" style="max-width:1300px;margin:0 auto 32px;grid-column:1/-1">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold-dark);margin-bottom:8px">Notre sélection</div>
+        <h2 style="font-family:var(--font-display);font-size:32px;font-weight:500;color:var(--espresso)">Produits Vedettes</h2>
+      </div>
+      <a href="/catalogue" class="btn-outline-gold">Voir tous les produits →</a>
+    </div>
+    {% for p in produits %}
+    <div class="product-card" onclick="window.location='/produit/{{ p.id }}'">
+      <div class="product-img">
+        {% if p.image %}
+        <img src="{{ url_for('static', filename='uploads/' + p.image) }}" alt="{{ p.nom }}" loading="lazy">
+        {% else %}
+        <div class="product-img-placeholder">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        {% endif %}
+        {% if p.promotion %}<div class="promo-tag">-{{ p.promotion|int }}%</div>{% endif %}
+        <div class="product-img-actions">
+          <button class="img-action-btn" onclick="event.stopPropagation();window.location='/produit/{{ p.id }}'" title="Voir">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="product-body">
+        <div class="product-matiere-tag">{{ p.matiere|replace('_',' ')|upper if p.matiere else '' }}</div>
+        <h3 class="product-name">{{ p.nom }}</h3>
+        <div class="product-footer">
+          {% if p.type_produit == 'mesure' %}
+          <span class="price-mesure">Prix sur devis</span>
+          {% else %}
+          <div>
+            {% if p.promotion %}<span class="price-old">{{ "%.0f"|format(p.prix) }} MAD</span>{% endif %}
+            <span class="price">{{ "%.0f"|format(p.prix * (1 - (p.promotion or 0)/100)) }} MAD</span>
+          </div>
+          {% endif %}
+          <span class="btn-voir">Voir</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="about-section">
+  <div class="about-inner">
+    <div class="about-text">
+      <span class="tag">Notre histoire</span>
+      <h2>Rattan House,<br>l'artisanat naturel<br>depuis 1986</h2>
+      <p>Depuis 1986, nous sommes au service de nos clients pour leur offrir des produits 100% naturels de la meilleure qualité, afin de garantir leur satisfaction et leur confort.</p>
+      <p>Chaque pièce est fabriquée à la main par nos artisans experts, en utilisant des matières premières soigneusement sélectionnées : rotin, raphia, osier, jonc de mer et bien d'autres fibres naturelles.</p>
+      <a href="/catalogue" class="btn-primary" style="margin-top:8px">Explorer le catalogue →</a>
+    </div>
+    <div class="about-img">
+      <img src="{{ url_for('static', filename='uploads/prod_3.jpg') }}" alt="Artisanat Rattan House">
+      <div class="about-badge">
+        <strong>1986</strong>
+        <span>Année de fondation</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MATIERES -->
+<section class="matieres-section">
+  <div class="matieres-inner">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold-dark);margin-bottom:8px">Naturel & Authentique</div>
+        <h2 style="font-family:var(--font-display);font-size:30px;font-weight:500;color:var(--espresso)">Nos matières premières</h2>
+      </div>
+      <a href="/catalogue" class="btn-outline-gold">Voir tous les produits</a>
+    </div>
+    <div class="matieres-grid">
+      {% for mat in [('rotin','Rotin'),('raphia','Raphia'),('roseau','Roseau'),('corde_chanvre','Chanvre'),('osier','Osier'),('doum','Doum'),('jonc_de_mer','Jonc de mer'),('fibre_palmier','Palmier')] %}
+      <a href="/catalogue?matiere={{ mat[0] }}" class="mat-card">
+        <svg class="mat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          {% if mat[0] == 'rotin' %}<path d="M12 22V2M12 2C12 2 7 7 7 12s5 10 5 10M12 2c0 0 5 5 5 10s-5 10-5 10"/>
+          {% elif mat[0] == 'raphia' %}<path d="M12 2L6 8l6 6 6-6-6-6zM6 14l6 6 6-6"/>
+          {% elif mat[0] == 'roseau' %}<line x1="12" y1="2" x2="12" y2="22"/><path d="M12 6c2-2 6-2 8 0M12 10c-2-2-6-2-8 0M12 14c2-2 6-2 8 0M12 18c-2-2-6-2-8 0"/>
+          {% elif mat[0] == 'corde_chanvre' %}<path d="M3 6c0 0 3-4 6-4s6 4 9 4-3 4-6 4-6-4-9-4zM3 14c0 0 3-4 6-4s6 4 9 4-3 4-6 4-6-4-9-4z"/>
+          {% elif mat[0] == 'osier' %}<circle cx="12" cy="12" r="10"/><path d="M12 2a15 15 0 010 20M2 12h20"/>
+          {% elif mat[0] == 'doum' %}<path d="M12 22V10M12 10c-2-4-6-5-8-4M12 10c2-4 6-5 8-4M12 14c-3-2-7-1-8 1M12 14c3-2 7-1 8 1"/>
+          {% elif mat[0] == 'jonc_de_mer' %}<path d="M2 12c3-5 7-8 10-8s7 3 10 8c-3 5-7 8-10 8s-7-3-10-8z"/><circle cx="12" cy="12" r="3"/>
+          {% else %}<path d="M12 22V12M12 12C8 12 4 8 4 4M12 12c4 0 8-4 8-8M12 12c-4 4-4 8 0 10M12 12c4 4 4 8 0 10"/>{% endif %}
+        </svg>
+        <span>{{ mat[1] }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- SUR MESURE -->
+
+
+<!-- CONTACT -->
+<section class="contact-section" id="contact-section">
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="section-header">
+      <span class="tag">Nous trouver</span>
+      <h2>Contactez-nous</h2>
+      <p>Notre équipe est disponible 7j/7 pour répondre à toutes vos questions</p>
+    </div>
+    <div class="contact-grid-new">
+
+      <!-- WHATSAPP -->
+      <a href="https://wa.me/212669952693" target="_blank" class="contact-card-new">
+        <div class="contact-card-icon" style="background:#e8f5e9;color:#25D366">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </div>
+        <div class="contact-card-content">
+          <strong>WhatsApp</strong>
+          <span>+212 669 952 693</span>
+          <em>Réponse rapide garantie</em>
+        </div>
+        <div class="contact-card-arrow">→</div>
+      </a>
+
+      <!-- INSTAGRAM -->
+      <a href="https://instagram.com/rattanhousema" target="_blank" class="contact-card-new">
+        <div class="contact-card-icon" style="background:#fce4ec;color:#e91e63">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+        </div>
+        <div class="contact-card-content">
+          <strong>Instagram</strong>
+          <span>@rattanhousema</span>
+          <em>Suivez nos créations</em>
+        </div>
+        <div class="contact-card-arrow">→</div>
+      </a>
+
+      <!-- BOUTIQUE -->
+      <a href="https://maps.app.goo.gl/8ubzZqYeDKVKZrXM9" target="_blank" class="contact-card-new">
+        <div class="contact-card-icon" style="background:#fff3e0;color:#e65100">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="contact-card-content">
+          <strong>Notre boutique</strong>
+          <span>Casablanca, Maroc</span>
+          <em>Ouvert 7j/7 · 8h – 22h</em>
+        </div>
+        <div class="contact-card-arrow">→</div>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}
