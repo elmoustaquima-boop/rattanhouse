@@ -92,9 +92,9 @@
       <tr>
         <td><strong>{{ p.nom[:35] }}</strong></td>
         <td>{{ p.matiere|replace('_',' ')|title if p.matiere else '—' }}</td>
-        <td>{{ "%.0f MAD"|format(p.prix) if p.prix else 'Sur devis' }}</td>
+        <td>{{ "%.0f MAD"|format(p.prixAffiche) if p.prixAffiche else 'Sur devis' }}</td>
         <td><span class="badge {% if p.type_produit=='mesure' %}badge-blue{% else %}badge-ok{% endif %}">{{ 'Sur mesure' if p.type_produit=='mesure' else 'Standard' }}</span></td>
-        <td>{% if p.promotion %}<span class="badge badge-warn">-{{ p.promotion|int }}%</span>{% else %}—{% endif %}</td>
+        <td>{% if p.promotionAppliquee %}<span class="badge badge-warn">-{{ p.promotionAppliquee|int }}%</span>{% else %}—{% endif %}</td>
       </tr>
       {% else %}
       <tr><td colspan="5" style="text-align:center;color:var(--text-light)">Aucun produit</td></tr>

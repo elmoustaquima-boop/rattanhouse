@@ -4,11 +4,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from functools import wraps
-import os
+import os, json
 
 app = Flask(__name__)
 app.secret_key = 'rattanhouse_secret_2024'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///rattanhouse.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/rattanhouse.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
@@ -16,43 +16,46 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 db = SQLAlchemy(app)
 
 ALLOWED = {'png','jpg','jpeg','gif','webp'}
-
 def allowed_file(fn):
     return '.' in fn and fn.rsplit('.',1)[1].lower() in ALLOWED
 
-# ══════════════════════════════════════════════════
-# MODÈLES — Cohérents avec le diagramme UML
-# ══════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════
+# 13 CLASSES 
+# ══════════════════════════════════════════════════════════════════
 
-# Classe 1 : ResponsableBoutique (= Utilisateur dans le diagramme)
+# ─── CLASSE 1 : ResponsableBoutique ───────────────────────────────
 class ResponsableBoutique(db.Model):
+    """Gestionnaire du site — accès au tableau de bord admin"""
     __tablename__ = 'responsable_boutique'
-    id             = db.Column(db.Integer, primary_key=True)
-    login          = db.Column(db.String(120), unique=True, nullable=False)
-    mot_de_passe   = db.Column(db.String(200), nullable=False)
-    nom            = db.Column(db.String(100))
-    role           = db.Column(db.String(20), default='admin')
-    date_creation  = db.Column(db.DateTime, default=datetime.utcnow)
+    id           = db.Column(db.Integer, primary_key=True)
+    login        = db.Column(db.String(120), unique=True, nullable=False)
+    mot_de_passe = db.Column(db.String(200), nullable=False)
+    nom          = db.Column(db.String(100))
+    role         = db.Column(db.String(20), default='admin')
 
-    def consulter_tableau_de_bord(self):
-        return {
-            'nb_produits_actifs': Produit.query.filter_by(actif=True).count(),
-            'nb_promotions': Produit.query.filter(Produit.promotion_appliquee > 0, Produit.actif==True).count(),
-            'nb_demandes_sur_mesure': DemandeSurMesure.query.count(),
-        }
+    def consulterTableauDeBord(self):
+        return TableauDeBord.get_stats()
 
-    def ajouter_produit(self, nom, matiere, description, image, type_produit, prix=None, promotion=None):
+    def ajouterProduit(self, nom, matiere, description, image, type_produit, prix=None):
         if type_produit == 'standard':
             p = ProduitStandard(nom=nom, matiere=matiere, description=description,
-                               image=image, prix_affiche=prix or 0,
-                               promotion_appliquee=promotion or 0)
+                                image=image, prixAffiche=prix or 0, promotionAppliquee=0)
         else:
             p = ProduitSurMesure(nom=nom, matiere=matiere, description=description, image=image)
         db.session.add(p)
         db.session.commit()
         return p
 
-    def supprimer_produit(self, produit_id):
+    def modifierProduit(self, produit_id, **kwargs):
+        p = Produit.query.get(produit_id)
+        if p:
+            for k, v in kwargs.items():
+                setattr(p, k, v)
+            db.session.commit()
+            return True
+        return False
+
+    def supprimerProduit(self, produit_id):
         p = Produit.query.get(produit_id)
         if p:
             db.session.delete(p)
@@ -60,197 +63,315 @@ class ResponsableBoutique(db.Model):
             return True
         return False
 
-    def appliquer_promotion(self, produit_id, taux):
-        p = ProduitStandard.query.get(produit_id)
-        if p:
-            p.promotion_appliquee = taux
-            p.nouveau_prix = p.calculer_nouveau_prix(taux)
+    def appliquerPromotion(self, produit_id, taux):
+        p = Produit.query.get(produit_id)
+        if p and p.type_produit == 'standard':
+            p.promotionAppliquee = taux
+            p.nouveauPrix = p.prixAffiche * (1 - taux / 100) if taux else p.prixAffiche
             db.session.commit()
             return True
         return False
 
-    def envoyer_devis_whatsapp(self, demande_id):
-        d = DemandeSurMesure.query.get(demande_id)
-        if d:
-            msg = f"Bonjour {d.nom_client} ! Suite a votre demande pour {d.type_produit}, voici notre devis."
-            return f"https://wa.me/{d.num_telephone}?text={msg}"
+    def envoyerDevisWhatsApp(self, surMesure_id):
+        sm = SurMesure.query.get(surMesure_id)
+        if sm:
+            num = sm.numTelephone.replace('+','').replace(' ','').replace('-','')
+            msg = (f"Bonjour {sm.nomClient} ! 🌿\n"
+                   f"Suite à votre demande pour {sm.typeProduit},\n"
+                   f"voici notre devis :\n\n"
+                   f"💰 Prix : ___ MAD\n"
+                   f"📦 Délai : ___ jours\n"
+                   f"🚚 Livraison : ___ MAD\n\n"
+                   f"Merci de confirmer 🙏")
+            return f"https://wa.me/{num}?text={msg}"
         return None
 
 
-# Classe 2 : Client
+# ─── CLASSE 2 : TableauDeBord ────────────────────────────────────
+class TableauDeBord(db.Model):
+    """Statistiques du site visibles dans l'interface admin"""
+    __tablename__ = 'tableau_de_bord'
+    id                    = db.Column(db.Integer, primary_key=True)
+    nbProduitsActifs      = db.Column(db.Integer, default=0)
+    nbPromotions          = db.Column(db.Integer, default=0)
+    nbProduitsSurMesure   = db.Column(db.Integer, default=0)
+    nbDemandesSurMesure   = db.Column(db.Integer, default=0)
+
+    @staticmethod
+    def get_stats():
+        return {
+            'produits':   Produit.query.filter_by(estActif=True).count(),
+            'promos':     Produit.query.filter(Produit.promotionAppliquee > 0, Produit.estActif==True).count(),
+            'matieres':   db.session.query(Produit.matiere).distinct().count(),
+            'sur_mesure': Produit.query.filter_by(type_produit='mesure', estActif=True).count(),
+            'demandes':   SurMesure.query.count(),
+        }
+
+    def visualiserProduitsActifs(self):
+        return Produit.query.filter_by(estActif=True).count()
+
+    def visualiserPromotions(self):
+        return Produit.query.filter(Produit.promotionAppliquee > 0, Produit.estActif==True).count()
+
+    def visualiserProduitsSurMesure(self):
+        return Produit.query.filter_by(type_produit='mesure', estActif=True).count()
+
+    def visualiserDemandesSurMesure(self):
+        return SurMesure.query.count()
+
+
+# ─── CLASSE 3 : Client ───────────────────────────────────────────
 class Client(db.Model):
+    """Visiteur du site — commande via WhatsApp sans compte"""
     __tablename__ = 'client'
     id            = db.Column(db.Integer, primary_key=True)
     nom           = db.Column(db.String(100))
-    num_telephone = db.Column(db.String(20))
-    date_contact  = db.Column(db.DateTime, default=datetime.utcnow)
+    numTelephone  = db.Column(db.String(20))
 
-    def explorer_catalogue(self, matiere=None):
-        q = Produit.query.filter_by(actif=True)
-        if matiere:
-            q = q.filter_by(matiere=matiere)
-        return q.all()
+    def consulterAccueil(self):
+        return Produit.query.filter_by(estActif=True).limit(8).all()
 
-    def telecharger_pdf(self, collection):
-        if collection == 'produits':
-            return '/static/catalogue_rattan_house.pdf'
-        elif collection == 'tissus':
-            return '/static/catalogue_tissus.pdf'
-        return None
+    def decouvririCollection(self):
+        return Produit.query.filter_by(estActif=True).all()
 
-    def contacter_assistant_ia(self, message):
-        return "https://medjassem.app.n8n.cloud/webhook/e569194a-7069-49a5-b9fc-7ffe8b88a813/chat"
+    def explorerCatalogue(self):
+        return Produit.query.filter_by(estActif=True).all()
+
+    def filtrerProduits(self, matiere):
+        return Produit.query.filter_by(estActif=True, matiere=matiere).all()
+
+    def telechargerPDF(self, collection):
+        c = CataloguePDF.query.filter_by(type=collection).first()
+        return c.telecharger() if c else None
+
+    def contacterAssistantIA(self, message):
+        ia = AssistantIA.query.first()
+        return ia.traiterRequete(message) if ia else None
+
+    def suivreInstagram(self):
+        return 'https://instagram.com/rattanhousema'
+
+    def trouverLocalisation(self):
+        return 'https://maps.app.goo.gl/8ubzZqYeDKVKZrXM9'
 
 
-# Classe 3 : Produit (classe de base)
-class Produit(db.Model):
-    __tablename__ = 'produit'
+# ─── CLASSE 4 : Panier ───────────────────────────────────────────
+class Panier(db.Model):
+    """Panier client — géré aussi en localStorage JavaScript"""
+    __tablename__ = 'panier'
     id            = db.Column(db.Integer, primary_key=True)
-    nom           = db.Column(db.String(200), nullable=False)
-    matiere       = db.Column(db.String(50))
-    description   = db.Column(db.Text)
+    session_id    = db.Column(db.String(100))
+    total         = db.Column(db.Float, default=0.0)
+    produits_json = db.Column(db.Text, default='[]')
+
+    def ajouterProduit(self, produit_id, quantite=1):
+        produits = json.loads(self.produits_json or '[]')
+        for item in produits:
+            if item['id'] == produit_id:
+                item['quantite'] += quantite
+                self.produits_json = json.dumps(produits)
+                self.total = self.calculerTotal()
+                db.session.commit()
+                return
+        p = Produit.query.get(produit_id)
+        if p:
+            produits.append({'id': produit_id, 'nom': p.nom,
+                            'prix': p.prixAffiche, 'quantite': quantite})
+            self.produits_json = json.dumps(produits)
+            self.total = self.calculerTotal()
+            db.session.commit()
+
+    def supprimerProduit(self, produit_id):
+        produits = json.loads(self.produits_json or '[]')
+        self.produits_json = json.dumps([p for p in produits if p['id'] != produit_id])
+        self.total = self.calculerTotal()
+        db.session.commit()
+
+    def calculerTotal(self):
+        produits = json.loads(self.produits_json or '[]')
+        return sum(p.get('prix', 0) * p.get('quantite', 1) for p in produits)
+
+    def commanderViaWhatsApp(self):
+        produits = json.loads(self.produits_json or '[]')
+        msg = "Bonjour Rattan House ! 🌿\nJe souhaite commander :\n\n"
+        for p in produits:
+            msg += f"• {p['nom']} x{p.get('quantite',1)}\n"
+        msg += f"\nTotal : {self.calculerTotal()} MAD\nMerci !"
+        return f"https://wa.me/212669952693?text={msg}"
+
+
+# ─── CLASSE 5 : Produit (classe abstraite) ───────────────────────
+class Produit(db.Model):
+    """Classe de base pour tous les produits du catalogue"""
+    __tablename__ = 'produit'
+    id               = db.Column(db.Integer, primary_key=True)
+    nom              = db.Column(db.String(200), nullable=False)
+    matiere          = db.Column(db.String(50))
+    description      = db.Column(db.Text)
     caracteristiques = db.Column(db.Text)
-    image         = db.Column(db.String(300))
-    actif         = db.Column(db.Boolean, default=True)
-    type_produit  = db.Column(db.String(20), default='standard')
-    date_ajout    = db.Column(db.DateTime, default=datetime.utcnow)
-    # Colonnes pour ProduitStandard
-    prix_affiche         = db.Column(db.Float, nullable=True)
-    promotion_appliquee  = db.Column(db.Float, nullable=True, default=0)
-    nouveau_prix         = db.Column(db.Float, nullable=True)
-    # Colonne pour ProduitSurMesure
-    necessite_devis = db.Column(db.Boolean, default=False)
+    image            = db.Column(db.String(300))
+    estActif         = db.Column(db.Boolean, default=True)
+    type_produit     = db.Column(db.String(20), default='standard')
+    date_ajout       = db.Column(db.DateTime, default=datetime.utcnow)
+    # Champs ProduitStandard
+    prixAffiche        = db.Column(db.Float, nullable=True)
+    promotionAppliquee = db.Column(db.Float, nullable=True, default=0)
+    nouveauPrix        = db.Column(db.Float, nullable=True)
+    # Champ ProduitSurMesure
+    necessiteDevis = db.Column(db.Boolean, default=False)
 
     __mapper_args__ = {'polymorphic_on': type_produit, 'polymorphic_identity': 'produit'}
 
 
-# Classe 4 : ProduitStandard (hérite de Produit)
+# ─── CLASSE 6 : ProduitStandard (hérite de Produit) ──────────────
 class ProduitStandard(Produit):
+    """Produit à prix fixe avec possibilité de promotion"""
     __mapper_args__ = {'polymorphic_identity': 'standard'}
 
-    def calculer_nouveau_prix(self, taux):
-        if self.prix_affiche and taux:
-            self.nouveau_prix = self.prix_affiche * (1 - taux / 100)
-            return self.nouveau_prix
-        return self.prix_affiche
+    def calculerNouveauPrix(self, taux):
+        if self.prixAffiche and taux:
+            self.nouveauPrix = self.prixAffiche * (1 - taux / 100)
+            db.session.commit()
+            return self.nouveauPrix
+        return self.prixAffiche
 
 
-# Classe 5 : ProduitSurMesure (hérite de Produit)
+# ─── CLASSE 7 : ProduitSurMesure (hérite de Produit) ─────────────
 class ProduitSurMesure(Produit):
+    """Produit nécessitant un devis — prix sur demande"""
     __mapper_args__ = {'polymorphic_identity': 'mesure'}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.necessite_devis = True
-        self.prix_affiche = None
+        self.necessiteDevis = True
+        self.prixAffiche = None
 
 
-# Classe 6 : TableauDeBord
-class TableauDeBord(db.Model):
-    __tablename__ = 'tableau_de_bord'
-    id                    = db.Column(db.Integer, primary_key=True)
-    nb_produits_actifs    = db.Column(db.Integer, default=0)
-    nb_promotions         = db.Column(db.Integer, default=0)
-    nb_demandes_sur_mesure = db.Column(db.Integer, default=0)
-    date_mise_a_jour      = db.Column(db.DateTime, default=datetime.utcnow)
+# ─── CLASSE 8 : SurMesure ────────────────────────────────────────
+class SurMesure(db.Model):
+    """Demande sur mesure soumise par un client"""
+    __tablename__ = 'sur_mesure'
+    id                = db.Column(db.Integer, primary_key=True)
+    nomClient         = db.Column(db.String(100), nullable=False)
+    numTelephone      = db.Column(db.String(20), nullable=False)
+    typeProduit       = db.Column(db.String(100))
+    matiereSouhaitee  = db.Column(db.String(100))
+    description       = db.Column(db.Text)
+    photoModele       = db.Column(db.Text)  # base64
+    statut            = db.Column(db.String(50), default='en_attente')
+    date_demande      = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def visualiser_stats(self):
-        self.nb_produits_actifs     = Produit.query.filter_by(actif=True).count()
-        self.nb_promotions          = Produit.query.filter(Produit.promotion_appliquee > 0, Produit.actif==True).count()
-        self.nb_demandes_sur_mesure = DemandeSurMesure.query.count()
-        self.date_mise_a_jour       = datetime.utcnow()
-        db.session.commit()
-        return self
-
-
-# Classe 7 : Demande (classe de base abstraite)
-class Demande(db.Model):
-    __tablename__ = 'demande'
-    id           = db.Column(db.Integer, primary_key=True)
-    date_demande = db.Column(db.DateTime, default=datetime.utcnow)
-    statut       = db.Column(db.String(50), default='en_attente')
-    type_demande = db.Column(db.String(20))
-
-    __mapper_args__ = {'polymorphic_on': type_demande, 'polymorphic_identity': 'demande'}
-
-    def envoyer_via_whatsapp(self):
-        raise NotImplementedError
-
-
-# Classe 8 : CommandeStandard (hérite de Demande)
-class CommandeStandard(Demande):
-    __tablename__ = 'commande_standard'
-    id         = db.Column(db.Integer, db.ForeignKey('demande.id'), primary_key=True)
-    prix_total = db.Column(db.Float, default=0.0)
-    produits_json = db.Column(db.Text)  # liste produits en JSON
-
-    __mapper_args__ = {'polymorphic_identity': 'standard'}
-
-    def envoyer_via_whatsapp(self):
-        msg = f"Bonjour Rattan House ! Je souhaite commander. Total: {self.prix_total} MAD"
-        return f"https://wa.me/212669952693?text={msg}"
-
-
-# Classe 9 : DemandeSurMesure (hérite de Demande)
-class DemandeSurMesure(Demande):
-    __tablename__ = 'demande_sur_mesure'
-    id                   = db.Column(db.Integer, db.ForeignKey('demande.id'), primary_key=True)
-    nom_client           = db.Column(db.String(100), nullable=False)
-    num_telephone        = db.Column(db.String(20), nullable=False)
-    type_produit         = db.Column(db.String(100))
-    matiere_souhaitee    = db.Column(db.String(100))
-    description_specifique = db.Column(db.Text)
-    photo_modele         = db.Column(db.Text)  # base64
-    option_passage_artisan = db.Column(db.Boolean, default=False)
-
-    __mapper_args__ = {'polymorphic_identity': 'sur_mesure'}
-
-    def envoyer_via_whatsapp(self):
-        msg = f"Bonjour ! Demande sur mesure de {self.nom_client} pour {self.type_produit}"
-        return f"https://wa.me/212669952693?text={msg}"
-
-    def uploader_photo(self, photo_base64):
-        self.photo_modele = photo_base64
+    def uploaderPhoto(self, photo_base64):
+        """Enregistre la photo de référence encodée en base64"""
+        self.photoModele = photo_base64
         db.session.commit()
 
-    def envoyer_demande(self):
+    def envoyerDemande(self):
+        """Marque la demande comme envoyée"""
         self.statut = 'envoyee'
         db.session.commit()
         return True
 
 
-# Classe 10 : AssistantIA
+# ─── CLASSE 9 : Commande (classe abstraite) ──────────────────────
+class Commande(db.Model):
+    """Classe de base abstraite pour les commandes"""
+    __tablename__ = 'commande'
+    id           = db.Column(db.Integer, primary_key=True)
+    date_commande = db.Column(db.DateTime, default=datetime.utcnow)
+    statut        = db.Column(db.String(50), default='en_attente')
+    type_commande = db.Column(db.String(20))
+
+    __mapper_args__ = {'polymorphic_on': type_commande, 'polymorphic_identity': 'commande'}
+
+    def envoyerViaWhatsApp(self):
+        raise NotImplementedError("Implémenter dans la sous-classe")
+
+
+# ─── CLASSE 10 : CommandeStandard (hérite de Commande) ───────────
+class CommandeStandard(Commande):
+    """Commande standard passée via le panier"""
+    __tablename__ = 'commande_standard'
+    id            = db.Column(db.Integer, db.ForeignKey('commande.id'), primary_key=True)
+    prixTotal     = db.Column(db.Float, default=0.0)
+    listeProduits = db.Column(db.Text, default='[]')
+
+    __mapper_args__ = {'polymorphic_identity': 'standard'}
+
+    def confirmerViaWhatsApp(self):
+        """Génère le message WhatsApp pour confirmer la commande"""
+        produits = json.loads(self.listeProduits or '[]')
+        msg = "Bonjour Rattan House ! 🌿\nJe souhaite commander :\n\n"
+        for p in produits:
+            msg += f"• {p.get('nom','')} x{p.get('quantite',1)}\n"
+        msg += f"\nTotal : {self.prixTotal} MAD\nMerci !"
+        return f"https://wa.me/212669952693?text={msg}"
+
+    def envoyerViaWhatsApp(self):
+        return self.confirmerViaWhatsApp()
+
+
+# ─── CLASSE 11 : CommandeSurMesure (hérite de Commande) ──────────
+class CommandeSurMesure(Commande):
+    """Commande sur mesure avec description spécifique"""
+    __tablename__ = 'commande_sur_mesure'
+    id                    = db.Column(db.Integer, db.ForeignKey('commande.id'), primary_key=True)
+    descriptionSpecifique = db.Column(db.Text)
+    optionPassageArtisan  = db.Column(db.Boolean, default=False)
+
+    __mapper_args__ = {'polymorphic_identity': 'sur_mesure'}
+
+    def demanderPassageArtisan(self):
+        """Active l'option de passage d'un artisan"""
+        self.optionPassageArtisan = True
+        db.session.commit()
+        return True
+
+    def envoyerDescriptionWhatsApp(self):
+        """Envoie la description spécifique via WhatsApp"""
+        msg = (f"Bonjour Rattan House ! 🌿\n"
+               f"Description spécifique :\n{self.descriptionSpecifique}\n\n"
+               f"Option artisan : {'Oui' if self.optionPassageArtisan else 'Non'}")
+        return f"https://wa.me/212669952693?text={msg}"
+
+    def envoyerViaWhatsApp(self):
+        return self.envoyerDescriptionWhatsApp()
+
+
+# ─── CLASSE 12 : AssistantIA ─────────────────────────────────────
 class AssistantIA(db.Model):
+    """Assistant IA intégré via webhook n8n"""
     __tablename__ = 'assistant_ia'
     id          = db.Column(db.Integer, primary_key=True)
-    webhook_url = db.Column(db.String(500), default='https://medjassem.app.n8n.cloud/webhook/e569194a-7069-49a5-b9fc-7ffe8b88a813/chat')
-    session_id  = db.Column(db.String(100))
+    webhook_url = db.Column(db.String(500),
+        default='https://medjassem.app.n8n.cloud/webhook/e569194a-7069-49a5-b9fc-7ffe8b88a813/chat')
 
-    def traiter_requete(self, message):
-        return {'webhook': self.webhook_url, 'message': message}
+    def traiterRequete(self, message):
+        return {'webhook': self.webhook_url, 'chatInput': message}
 
-    def generer_reponse(self, reponse_ia):
-        return reponse_ia
+    def genererReponse(self, reponse_ia):
+        return reponse_ia.get('output') or reponse_ia.get('text') or "Désolé, je n'ai pas compris."
 
 
-# Classe 11 : CataloguePDF
+# ─── CLASSE 13 : CataloguePDF ────────────────────────────────────
 class CataloguePDF(db.Model):
+    """Catalogue PDF téléchargeable — Produits ou Tissus"""
     __tablename__ = 'catalogue_pdf'
     id          = db.Column(db.Integer, primary_key=True)
-    fichier_url = db.Column(db.String(300))
-    type        = db.Column(db.String(50))  # 'Tissus' ou 'Produits'
+    type        = db.Column(db.String(50))
+    fichierUrl  = db.Column(db.String(300))
     nb_pages    = db.Column(db.Integer)
 
     def visualiser(self):
-        return self.fichier_url
+        return self.fichierUrl
 
     def telecharger(self):
-        return self.fichier_url
+        return self.fichierUrl
 
 
-# ══════════════════════════════════════════════════
-# HELPERS
-# ══════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════
+# HELPER
+# ══════════════════════════════════════════════════════════════════
 
 def admin_required(f):
     @wraps(f)
@@ -261,19 +382,19 @@ def admin_required(f):
     return dec
 
 
-# ══════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════
 # ROUTES PUBLIQUES
-# ══════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════
 
 @app.route('/')
 def index():
-    produits = Produit.query.filter_by(actif=True).limit(8).all()
+    produits = Produit.query.filter_by(estActif=True).limit(8).all()
     return render_template('index.html', produits=produits)
 
 @app.route('/catalogue')
 def catalogue():
     matiere = request.args.get('matiere', '')
-    q = Produit.query.filter_by(actif=True)
+    q = Produit.query.filter_by(estActif=True)
     if matiere:
         q = q.filter_by(matiere=matiere)
     produits = q.all()
@@ -305,16 +426,22 @@ def sur_mesure():
 def api_demande_mesure():
     try:
         data = request.get_json()
-        demande = DemandeSurMesure(
-            nom_client=data.get('nom', ''),
-            num_telephone=data.get('telephone', ''),
-            type_produit=data.get('type_produit', ''),
-            matiere_souhaitee=data.get('matiere', ''),
-            description_specifique=data.get('description', ''),
-            photo_modele=data.get('photo', None),
-            option_passage_artisan=data.get('option_artisan', False)
+        sm = SurMesure(
+            nomClient        = data.get('nom', ''),
+            numTelephone     = data.get('telephone', ''),
+            typeProduit      = data.get('type_produit', ''),
+            matiereSouhaitee = data.get('matiere', ''),
+            description      = data.get('description', ''),
+            photoModele      = data.get('photo', None),
         )
-        db.session.add(demande)
+        # Créer aussi CommandeSurMesure liée
+        cmd = CommandeSurMesure(
+            descriptionSpecifique = data.get('description', ''),
+            optionPassageArtisan  = data.get('option_artisan', False)
+        )
+        sm.envoyerDemande()
+        db.session.add(sm)
+        db.session.add(cmd)
         db.session.commit()
         return jsonify({'success': True})
     except Exception as e:
@@ -324,15 +451,15 @@ def api_demande_mesure():
 def session_info():
     return jsonify({
         'logged_in': 'user_id' in session,
-        'user_id': session.get('user_id'),
-        'user_nom': session.get('user_nom'),
+        'user_id':   session.get('user_id'),
+        'user_nom':  session.get('user_nom'),
         'user_role': session.get('user_role'),
     })
 
 
-# ══════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════
 # AUTHENTIFICATION
-# ══════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════
 
 @app.route('/connexion', methods=['GET', 'POST'])
 def connexion():
@@ -354,27 +481,21 @@ def deconnexion():
     return redirect(url_for('index'))
 
 
-# ══════════════════════════════════════════════════
-# ADMIN
-# ══════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════
+# ROUTES ADMIN
+# ══════════════════════════════════════════════════════════════════
 
 @app.route('/admin')
 @admin_required
 def admin_dashboard():
-    stats = {
-        'produits': Produit.query.filter_by(actif=True).count(),
-        'promos': Produit.query.filter(Produit.promotion_appliquee > 0, Produit.actif==True).count(),
-        'matieres': db.session.query(Produit.matiere).distinct().count(),
-        'sur_mesure': ProduitSurMesure.query.filter_by(actif=True).count(),
-        'demandes': DemandeSurMesure.query.count(),
-    }
-    produits_recents = Produit.query.filter_by(actif=True).order_by(Produit.date_ajout.desc()).limit(8).all()
+    stats = TableauDeBord.get_stats()
+    produits_recents = Produit.query.filter_by(estActif=True).order_by(Produit.date_ajout.desc()).limit(8).all()
     return render_template('admin/dashboard.html', stats=stats, produits_recents=produits_recents)
 
 @app.route('/admin/produits')
 @admin_required
 def admin_produits():
-    produits = Produit.query.filter_by(actif=True).order_by(Produit.date_ajout.desc()).all()
+    produits = Produit.query.filter_by(estActif=True).order_by(Produit.date_ajout.desc()).all()
     return render_template('admin/produits.html', produits=produits, unread=0)
 
 @app.route('/admin/ajouter-produit', methods=['POST'])
@@ -388,18 +509,15 @@ def ajouter_produit():
             fn = secure_filename(f"prod_{int(datetime.utcnow().timestamp())}_{f.filename}")
             f.save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
             img = fn
-    tp = request.form.get('type_produit', 'standard')
+    tp  = request.form.get('type_produit', 'standard')
     prix = None
     if request.form.get('prix'):
         try: prix = float(request.form.get('prix'))
         except: pass
-    responsable.ajouter_produit(
-        nom=request.form.get('nom'),
-        matiere=request.form.get('matiere'),
-        description=request.form.get('description'),
-        image=img,
-        type_produit=tp,
-        prix=prix
+    responsable.ajouterProduit(
+        nom=request.form.get('nom'), matiere=request.form.get('matiere'),
+        description=request.form.get('description'), image=img,
+        type_produit=tp, prix=prix
     )
     return jsonify({'success': True})
 
@@ -407,7 +525,7 @@ def ajouter_produit():
 @admin_required
 def supprimer_produit(id):
     responsable = ResponsableBoutique.query.get(session['user_id'])
-    success = responsable.supprimer_produit(id)
+    success = responsable.supprimerProduit(id)
     return jsonify({'success': success})
 
 @app.route('/admin/promotions', methods=['GET', 'POST'])
@@ -416,101 +534,96 @@ def admin_promotions():
     if request.method == 'POST':
         d = request.get_json()
         responsable = ResponsableBoutique.query.get(session['user_id'])
-        responsable.appliquer_promotion(d.get('produit_id'), d.get('reduction', 0))
+        responsable.appliquerPromotion(d.get('produit_id'), d.get('reduction', 0))
         return jsonify({'success': True})
-    produits = Produit.query.filter_by(actif=True).all()
+    produits = Produit.query.filter_by(estActif=True).all()
     return render_template('admin/promotions.html', produits=produits, unread=0)
 
 @app.route('/admin/sur-mesure')
 @admin_required
 def admin_sur_mesure():
-    demandes = DemandeSurMesure.query.order_by(DemandeSurMesure.date_demande.desc()).all()
+    demandes = SurMesure.query.order_by(SurMesure.date_demande.desc()).all()
     return render_template('admin/sur_mesure.html', demandes=demandes)
 
 @app.route('/admin/supprimer-demande/<int:id>', methods=['DELETE'])
 @admin_required
 def admin_supprimer_demande(id):
-    demande = DemandeSurMesure.query.get_or_404(id)
+    demande = SurMesure.query.get_or_404(id)
     db.session.delete(demande)
     db.session.commit()
     return jsonify({'success': True})
 
 
-# ══════════════════════════════════════════════════
-# INIT DB
-# ══════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════
+# INITIALISATION BASE DE DONNÉES
+# ══════════════════════════════════════════════════════════════════
 
 def init_db():
     db.create_all()
 
-    # Créer le responsable boutique (admin)
     if not ResponsableBoutique.query.filter_by(role='admin').first():
         db.session.add(ResponsableBoutique(
-            nom='Gestionnaire',
-            login='admin@rattanhouse.ma',
-            mot_de_passe=generate_password_hash('admin123'),
-            role='admin'
+            nom='Gestionnaire', login='admin@rattanhouse.ma',
+            mot_de_passe=generate_password_hash('admin123'), role='admin'
         ))
         db.session.commit()
-        print("ResponsableBoutique cree")
 
-    # Créer les catalogues PDF
-    if CataloguePDF.query.count() == 0:
-        db.session.add(CataloguePDF(fichier_url='/static/catalogue_rattan_house.pdf', type='Produits', nb_pages=16))
-        db.session.add(CataloguePDF(fichier_url='/static/catalogue_tissus.pdf', type='Tissus', nb_pages=10))
+    if AssistantIA.query.count() == 0:
+        db.session.add(AssistantIA())
         db.session.commit()
-        print("CataloguesPDF crees")
 
-    # Créer les produits
+    if CataloguePDF.query.count() == 0:
+        db.session.add(CataloguePDF(fichierUrl='/static/catalogue_rattan_house.pdf', type='Produits', nb_pages=16))
+        db.session.add(CataloguePDF(fichierUrl='/static/catalogue_tissus.pdf', type='Tissus', nb_pages=10))
+        db.session.commit()
+
     if Produit.query.count() == 0:
-        produits_standard = [
-            {'nom':'Salon en rotin exterieur','description':'Salon en rotin ideal pour terrasse.','caracteristiques':'Matiere: rotin tresse','matiere':'rotin','prix_affiche':17000,'image':'prod_1.jpg'},
-            {'nom':'Lampadaire en rotin','description':'Lampadaire en rotin lumiere douce.','caracteristiques':'Matiere: rotin naturel','matiere':'rotin','prix_affiche':1000,'image':'prod_2.jpg'},
-            {'nom':'Salon en rotin arrondi','description':'Design arrondi elegance et confort.','caracteristiques':'Matiere: rotin naturel','matiere':'rotin','prix_affiche':14500,'image':'prod_3.jpg'},
-            {'nom':'Suspension moderne en rotin','description':'Suspension artistique en rotin.','caracteristiques':'Matiere: rotin tresse','matiere':'rotin','prix_affiche':1500,'image':'prod_4.jpg'},
-            {'nom':'Suspension design en rotin','description':'Forme sculpturale originale.','caracteristiques':'Matiere: rotin naturel','matiere':'rotin','prix_affiche':700,'image':'prod_5.jpg'},
-            {'nom':'Applique murale en raphia','description':'Applique murale en raphia naturel.','caracteristiques':'Matiere: raphia naturel','matiere':'raphia','prix_affiche':150,'image':'prod_6.jpg'},
-            {'nom':'Lampadaire en raphia','description':'Lampadaire en raphia.','caracteristiques':'Matiere: raphia naturel','matiere':'raphia','prix_affiche':250,'image':'prod_7.jpg'},
-            {'nom':'Suspension en raphia','description':'Suspension raphia boheme.','caracteristiques':'Matiere: raphia tresse','matiere':'raphia','prix_affiche':900,'image':'prod_8.jpg'},
-            {'nom':'Suspension decorative en raphia','description':'Suspension raphia style naturel.','caracteristiques':'Matiere: raphia naturel','matiere':'raphia','prix_affiche':250,'image':'prod_9.jpg'},
-            {'nom':'Lampe de table en raphia','description':'Lampe table raphia minimaliste.','caracteristiques':'Matiere: raphia naturel','matiere':'raphia','prix_affiche':150,'image':'prod_10.jpg'},
-            {'nom':'Suspension en fibre naturelle','description':'Suspension fibre naturelle.','caracteristiques':'Matiere: fibre de palmier','matiere':'fibre_palmier','prix_affiche':450,'image':'prod_11.jpg'},
-            {'nom':'Tabouret en bois et doum','description':'Tabouret artisanal robuste.','caracteristiques':'Matiere: bois et doum','matiere':'doum','prix_affiche':60,'image':'prod_12.jpg'},
-            {'nom':'Set paniers rangement Doum','description':'Ensemble trois paniers doum.','caracteristiques':'Matiere: fibre doum','matiere':'doum','prix_affiche':290,'image':'prod_13.jpg'},
-            {'nom':'Main courante en chanvre','description':'Rampe escalier chanvre.','caracteristiques':'Matiere: chanvre','matiere':'corde_chanvre','prix_affiche':150,'image':'prod_14.jpg'},
-            {'nom':'Suspension chapeau jonc de mer','description':'Luminaire jonc de mer.','caracteristiques':'Matiere: jonc de mer','matiere':'jonc_de_mer','prix_affiche':450,'image':'prod_15.jpg'},
-            {'nom':'Suspension ajouree en doum','description':'Luminaire doum tresse.','caracteristiques':'Matiere: doum','matiere':'doum','prix_affiche':240,'image':'prod_16.jpg'},
-            {'nom':'Suspension bambou et corde','description':'Lustre bambou et corde.','caracteristiques':'Matiere: bambou et chanvre','matiere':'corde_chanvre','prix_affiche':750,'image':'prod_17.jpg'},
-            {'nom':'Suspension Boule Jonc de Mer','description':'Suspension globe jonc de mer.','caracteristiques':'Matiere: jonc de mer','matiere':'jonc_de_mer','prix_affiche':350,'image':'prod_19.jpg'},
-            {'nom':'Rouleau cannage en rotin','description':'Cannage qualite superieure.','caracteristiques':'Matiere: moelle de rotin','matiere':'rotin','prix_affiche':400,'image':'prod_20.jpg'},
-            {'nom':'Canape Corbeille en Rotin','description':'Canape sculptural rotin.','caracteristiques':'Matiere: rotin naturel','matiere':'rotin','prix_affiche':8800,'image':'prod_21.jpg'},
-            {'nom':'Chaise Paon rotin avec motif','description':'Chaise paon spectaculaire.','caracteristiques':'Matiere: rotin tresse','matiere':'rotin','prix_affiche':8000,'image':'prod_22.jpg'},
-            {'nom':'Chaise Paon rotin simple','description':'Chaise paon epuree.','caracteristiques':'Matiere: rotin naturel','matiere':'rotin','prix_affiche':6800,'image':'prod_23.jpg'},
-            {'nom':'Chaise longue vintage rotin','description':'Chaise longue vintage.','caracteristiques':'Matiere: rotin et bambou','matiere':'rotin','prix_affiche':7000,'image':'prod_24.jpg'},
-            {'nom':'Decoration murale raphia','description':'Deco murale raphia soleil.','caracteristiques':'Matiere: raphia et perles bois','matiere':'raphia','prix_affiche':180,'image':'prod_25.jpg'},
-            {'nom':'Duo plateaux tresses osier','description':'Plateaux ronds osier.','caracteristiques':'Matiere: osier naturel','matiere':'osier','prix_affiche':90,'image':'prod_26.jpg'},
-            {'nom':'Ensemble miroirs raphia rotin','description':'Quatre miroirs raphia rotin.','caracteristiques':'Matiere: raphia et rotin','matiere':'raphia','prix_affiche':770,'image':'prod_27.jpg'},
-            {'nom':'Organisation table en osier','description':'Organisateurs table osier.','caracteristiques':'Matiere: osier naturel','matiere':'osier','prix_affiche':90,'image':'prod_28.jpg'},
-            {'nom':'Patere murale en osier','description':'Patere murale osier.','caracteristiques':'Matiere: osier/rotin','matiere':'osier','prix_affiche':100,'image':'prod_29.jpg'},
-            {'nom':'Rangement rotin console','description':'Meuble rangement rotin.','caracteristiques':'Matiere: rotin et osier','matiere':'rotin','prix_affiche':3400,'image':'prod_32.jpg'},
-            {'nom':'Etagere arche en rotin','description':'Etagere arche rotin.','caracteristiques':'Matiere: rotin naturel','matiere':'rotin','prix_affiche':4800,'image':'prod_33.jpg'},
-            {'nom':'Serie paniers cannage rotin','description':'Trois paniers cannage rotin.','caracteristiques':'Matiere: cannage rotin','matiere':'rotin','prix_affiche':2100,'image':'prod_34.jpg'},
-            {'nom':'Suspension design rotin noir','description':'Suspension rotin noir.','caracteristiques':'Matiere: rotin noir','matiere':'rotin','prix_affiche':700,'image':'prod_35.jpg'},
-            {'nom':'Suspension corde jute simple','description':'Suspension jute minimaliste.','caracteristiques':'Matiere: corde de jute','matiere':'corde_chanvre','prix_affiche':280,'image':'prod_36.jpg'},
-            {'nom':'Suspension corde jute decoree','description':'Suspension jute pompons.','caracteristiques':'Matiere: jute et perles bois','matiere':'corde_chanvre','prix_affiche':600,'image':'prod_37.jpg'},
-            {'nom':'Tabouret de bar en rotin','description':'Tabouret bar rotin moderne.','caracteristiques':'Matiere: rotin et metal','matiere':'rotin','prix_affiche':700,'image':'prod_38.jpg'},
+        standards = [
+            {'nom':'Salon en rotin exterieur','description':'Salon en rotin ideal pour terrasse.','caracteristiques':'Matiere: rotin tresse','matiere':'rotin','prixAffiche':17000,'image':'prod_1.jpg'},
+            {'nom':'Lampadaire en rotin','description':'Lampadaire en rotin lumiere douce.','caracteristiques':'Matiere: rotin naturel','matiere':'rotin','prixAffiche':1000,'image':'prod_2.jpg'},
+            {'nom':'Salon en rotin arrondi','description':'Design arrondi elegance et confort.','caracteristiques':'Matiere: rotin naturel','matiere':'rotin','prixAffiche':14500,'image':'prod_3.jpg'},
+            {'nom':'Suspension moderne en rotin','description':'Suspension artistique en rotin.','caracteristiques':'Matiere: rotin tresse','matiere':'rotin','prixAffiche':1500,'image':'prod_4.jpg'},
+            {'nom':'Suspension design en rotin','description':'Forme sculpturale originale.','caracteristiques':'Matiere: rotin naturel','matiere':'rotin','prixAffiche':700,'image':'prod_5.jpg'},
+            {'nom':'Applique murale en raphia','description':'Applique murale en raphia naturel.','caracteristiques':'Matiere: raphia naturel','matiere':'raphia','prixAffiche':150,'image':'prod_6.jpg'},
+            {'nom':'Lampadaire en raphia','description':'Lampadaire en raphia.','caracteristiques':'Matiere: raphia naturel','matiere':'raphia','prixAffiche':250,'image':'prod_7.jpg'},
+            {'nom':'Suspension en raphia','description':'Suspension raphia boheme.','caracteristiques':'Matiere: raphia tresse','matiere':'raphia','prixAffiche':900,'image':'prod_8.jpg'},
+            {'nom':'Suspension decorative en raphia','description':'Suspension raphia style naturel.','caracteristiques':'Matiere: raphia naturel','matiere':'raphia','prixAffiche':250,'image':'prod_9.jpg'},
+            {'nom':'Lampe de table en raphia','description':'Lampe table raphia minimaliste.','caracteristiques':'Matiere: raphia naturel','matiere':'raphia','prixAffiche':150,'image':'prod_10.jpg'},
+            {'nom':'Suspension en fibre naturelle','description':'Suspension fibre naturelle.','caracteristiques':'Matiere: fibre de palmier','matiere':'fibre_palmier','prixAffiche':450,'image':'prod_11.jpg'},
+            {'nom':'Tabouret en bois et doum','description':'Tabouret artisanal robuste.','caracteristiques':'Matiere: bois et doum','matiere':'doum','prixAffiche':60,'image':'prod_12.jpg'},
+            {'nom':'Set paniers rangement Doum','description':'Ensemble trois paniers doum.','caracteristiques':'Matiere: fibre doum','matiere':'doum','prixAffiche':290,'image':'prod_13.jpg'},
+            {'nom':'Main courante en chanvre','description':'Rampe escalier chanvre.','caracteristiques':'Matiere: chanvre','matiere':'corde_chanvre','prixAffiche':150,'image':'prod_14.jpg'},
+            {'nom':'Suspension chapeau jonc de mer','description':'Luminaire jonc de mer.','caracteristiques':'Matiere: jonc de mer','matiere':'jonc_de_mer','prixAffiche':450,'image':'prod_15.jpg'},
+            {'nom':'Suspension ajouree en doum','description':'Luminaire doum tresse.','caracteristiques':'Matiere: doum','matiere':'doum','prixAffiche':240,'image':'prod_16.jpg'},
+            {'nom':'Suspension bambou et corde','description':'Lustre bambou et corde.','caracteristiques':'Matiere: bambou et chanvre','matiere':'corde_chanvre','prixAffiche':750,'image':'prod_17.jpg'},
+            {'nom':'Suspension Boule Jonc de Mer','description':'Suspension globe jonc de mer.','caracteristiques':'Matiere: jonc de mer','matiere':'jonc_de_mer','prixAffiche':350,'image':'prod_19.jpg'},
+            {'nom':'Rouleau cannage en rotin','description':'Cannage qualite superieure.','caracteristiques':'Matiere: moelle de rotin','matiere':'rotin','prixAffiche':400,'image':'prod_20.jpg'},
+            {'nom':'Canape Corbeille en Rotin','description':'Canape sculptural rotin.','caracteristiques':'Matiere: rotin naturel','matiere':'rotin','prixAffiche':8800,'image':'prod_21.jpg'},
+            {'nom':'Chaise Paon rotin avec motif','description':'Chaise paon spectaculaire.','caracteristiques':'Matiere: rotin tresse','matiere':'rotin','prixAffiche':8000,'image':'prod_22.jpg'},
+            {'nom':'Chaise Paon rotin simple','description':'Chaise paon epuree.','caracteristiques':'Matiere: rotin naturel','matiere':'rotin','prixAffiche':6800,'image':'prod_23.jpg'},
+            {'nom':'Chaise longue vintage rotin','description':'Chaise longue vintage.','caracteristiques':'Matiere: rotin et bambou','matiere':'rotin','prixAffiche':7000,'image':'prod_24.jpg'},
+            {'nom':'Decoration murale raphia','description':'Deco murale raphia soleil.','caracteristiques':'Matiere: raphia et perles bois','matiere':'raphia','prixAffiche':180,'image':'prod_25.jpg'},
+            {'nom':'Duo plateaux tresses osier','description':'Plateaux ronds osier.','caracteristiques':'Matiere: osier naturel','matiere':'osier','prixAffiche':90,'image':'prod_26.jpg'},
+            {'nom':'Ensemble miroirs raphia rotin','description':'Quatre miroirs raphia rotin.','caracteristiques':'Matiere: raphia et rotin','matiere':'raphia','prixAffiche':770,'image':'prod_27.jpg'},
+            {'nom':'Organisation table en osier','description':'Organisateurs table osier.','caracteristiques':'Matiere: osier naturel','matiere':'osier','prixAffiche':90,'image':'prod_28.jpg'},
+            {'nom':'Patere murale en osier','description':'Patere murale osier.','caracteristiques':'Matiere: osier/rotin','matiere':'osier','prixAffiche':100,'image':'prod_29.jpg'},
+            {'nom':'Rangement rotin console','description':'Meuble rangement rotin.','caracteristiques':'Matiere: rotin et osier','matiere':'rotin','prixAffiche':3400,'image':'prod_32.jpg'},
+            {'nom':'Etagere arche en rotin','description':'Etagere arche rotin.','caracteristiques':'Matiere: rotin naturel','matiere':'rotin','prixAffiche':4800,'image':'prod_33.jpg'},
+            {'nom':'Serie paniers cannage rotin','description':'Trois paniers cannage rotin.','caracteristiques':'Matiere: cannage rotin','matiere':'rotin','prixAffiche':2100,'image':'prod_34.jpg'},
+            {'nom':'Suspension design rotin noir','description':'Suspension rotin noir.','caracteristiques':'Matiere: rotin noir','matiere':'rotin','prixAffiche':700,'image':'prod_35.jpg'},
+            {'nom':'Suspension corde jute simple','description':'Suspension jute minimaliste.','caracteristiques':'Matiere: corde de jute','matiere':'corde_chanvre','prixAffiche':280,'image':'prod_36.jpg'},
+            {'nom':'Suspension corde jute decoree','description':'Suspension jute pompons.','caracteristiques':'Matiere: jute et perles bois','matiere':'corde_chanvre','prixAffiche':600,'image':'prod_37.jpg'},
+            {'nom':'Tabouret de bar en rotin','description':'Tabouret bar rotin moderne.','caracteristiques':'Matiere: rotin et metal','matiere':'rotin','prixAffiche':700,'image':'prod_38.jpg'},
         ]
-        produits_mesure = [
+        mesures = [
             {'nom':'Parasol exotique paille naturelle','description':'Parasol paille ambiance tropicale.','caracteristiques':'Matiere: roseau ou paille','matiere':'roseau','image':'prod_18.jpg'},
             {'nom':'Pergola en corde de jute','description':'Pergola jute sur mesure.','caracteristiques':'Matiere: corde de jute','matiere':'corde_chanvre','image':'prod_30.jpg'},
             {'nom':'Pergola brise-vue en chaume','description':'Pergola chaume naturel.','caracteristiques':'Matiere: chaume et bois','matiere':'roseau','image':'prod_31.jpg'},
         ]
-        for p_data in produits_standard:
-            db.session.add(ProduitStandard(**p_data))
-        for p_data in produits_mesure:
-            db.session.add(ProduitSurMesure(**p_data))
+        for p in standards: db.session.add(ProduitStandard(**p))
+        for p in mesures:    db.session.add(ProduitSurMesure(**p))
         db.session.commit()
-        print(f"OK {len(produits_standard)+len(produits_mesure)} produits inseres")
+        print(f"✓ {len(standards)+len(mesures)} produits inseres")
 
 with app.app_context():
     init_db()

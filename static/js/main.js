@@ -136,3 +136,30 @@ document.addEventListener('DOMContentLoaded', () => {
   checkAdminSession();
   highlightAdminNav();
 });
+
+// ─── CONNEXION ADMIN ─────────────────────────────
+async function doConnexion() {
+  const email = document.getElementById('loginEmail')?.value?.trim();
+  const pwd   = document.getElementById('loginPwd')?.value;
+  const err   = document.getElementById('loginErr');
+  if (!email || !pwd) {
+    if (err) { err.textContent = 'Email et mot de passe requis'; err.style.display = 'block'; }
+    return;
+  }
+  try {
+    const r = await fetch('/connexion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, mot_de_passe: pwd })
+    });
+    const d = await r.json();
+    if (d.success) {
+      showToast('Connexion réussie !');
+      setTimeout(() => { window.location.href = '/admin'; }, 700);
+    } else {
+      if (err) { err.textContent = d.message || 'Email ou mot de passe incorrect'; err.style.display = 'block'; }
+    }
+  } catch {
+    if (err) { err.textContent = 'Erreur réseau'; err.style.display = 'block'; }
+  }
+}

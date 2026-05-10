@@ -144,7 +144,7 @@
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         </div>
         {% endif %}
-        {% if p.promotion_appliquee %}<div class="promo-tag">-{{ p.promotion_appliquee|int }}%</div>{% endif %}
+        {% if p.promotionAppliquee %}<div class="promo-tag">-{{ p.promotionAppliquee|int }}%</div>{% endif %}
         <div class="product-img-actions">
           <button class="img-action-btn" onclick="event.stopPropagation();window.location='/produit/{{ p.id }}'" title="Voir">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -159,8 +159,8 @@
           <span class="price-mesure">Prix sur devis</span>
           {% else %}
           <div>
-            {% if p.promotion_appliquee %}<span class="price-old">{{ "%.0f"|format(p.prix_affiche) }} MAD</span>{% endif %}
-            <span class="price">{{ "%.0f"|format(p.prix_affiche * (1 - (p.promotion_appliquee or 0)/100)) }} MAD</span>
+            {% if p.promotionAppliquee %}<span class="price-old">{{ "%.0f"|format(p.prixAffiche) }} MAD</span>{% endif %}
+            <span class="price">{{ "%.0f"|format(p.prixAffiche * (1 - (p.promotionAppliquee or 0)/100)) }} MAD</span>
           </div>
           {% endif %}
           <span class="btn-voir">Voir</span>
